@@ -1,6 +1,6 @@
 name: websocket_channel_wrapper
 description: Wrapper for web_socket_channel package lightweight and isomorphic lib with socket.io-like event handling, Future-based requests.
-version: 1.0.0
+version: 1.1.0
 author: cTatu <cristian.tatu@estudiante.uam.es>
 homepage: https://github.com/cTatu/ws-wrapper-dart2
 
@@ -9,4 +9,4 @@ environment:
 
 dependencies:
   web_socket_channel: ^1.0.14
-  pedantic:
+  pedantic: ^1.8.0+1

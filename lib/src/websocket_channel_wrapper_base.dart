@@ -2,39 +2,69 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:math';
 import 'package:pedantic/pedantic.dart';
 import 'package:web_socket_channel/io.dart';
 
 class WebSocketChannelWrapper {
   int _requestIds;
+  bool _wasOpen = false;
   Map<dynamic, StreamController> _channels;
   IOWebSocketChannel _socket;
-  Completer _readyCompleter;
-  Timer _connectionTimer;
+  StreamController _readyStream, _onDoneStream;
+  Timer _reconnectTimer, _autoRecTimer;
+
+  final double RECONNECT_VALUE_MIN = 1000, // 1 second
+               RECONNECT_VALUE_MAX = 1000 * 60.0, // 1 minute
+               RECONNECT_VALUE_FACTOR = 1.4;
+
+  double _reconnectValue;
+  var _url, _protocols, _headers, _pingInterval;
 
   WebSocketChannelWrapper(String url,
-      {Iterable<String> protocols, Map<String, dynamic> headers, Duration pingInterval,
-      Timer connectionTimer}) :
-        _socket = IOWebSocketChannel.connect(url, protocols: protocols,
-                                                  headers:headers,
-                                                  pingInterval:pingInterval),
-        _requestIds = 0,
-        _readyCompleter = Completer(),
-        _channels = HashMap()
-        {
-          _connectionTimer = connectionTimer ?? Timer(Duration(seconds: 1), () => 
-                                                        _readyCompleter.completeError(TimeoutException));
-          _socket.stream.listen(_onData);
-        }
+      {Iterable<String> protocols, Map<String, dynamic> headers, Duration pingInterval}) : _requestIds = 0,
+                                _readyStream = StreamController(),
+                                _onDoneStream = StreamController(),
+                                _channels = HashMap()
+      {
+        _reconnectValue = RECONNECT_VALUE_MIN;
+        _init(url, protocols: protocols, headers: headers, pingInterval: pingInterval);
+      }
 
-  WebSocketChannelWrapper.fromSocket(WebSocket socket) :
-        _socket = IOWebSocketChannel(socket);
+  _fromSocket(WebSocket socket) => IOWebSocketChannel(socket);
 
-  /// Future that completes when socket connect successfully
-  /// 
-  /// Throw `TimeoutException` when default Timer of 1 second
-  // run out before the socket can connect
-  Future get ready => _readyCompleter?.future;
+  _init(url, {protocols, headers, pingInterval, connectionTimer}) {
+    _url = url;
+    _protocols = protocols;
+    _headers = headers;
+    _pingInterval = pingInterval;
+
+    WebSocket.connect(_url, headers: _headers, protocols: _protocols).then((ws) {
+      ws.pingInterval = pingInterval;
+      _socket = _fromSocket(ws);
+      _socket.stream.listen(_onData, onDone: _onDone);
+    }).catchError((e) => _reconnect());
+  }
+
+  /// Auto-reconnect using exponential back-off
+  _reconnect () {
+    if(_wasOpen) {
+        _reconnectValue = RECONNECT_VALUE_MIN;
+    }else {
+        _reconnectValue = min<num>(_reconnectValue * RECONNECT_VALUE_FACTOR, RECONNECT_VALUE_MAX);
+    }
+
+    _reconnectTimer = Timer(Duration(milliseconds: _reconnectValue.round()), () => 
+                          _init(_url, protocols: _protocols, headers: _headers, pingInterval: _pingInterval));
+  }
+
+  /// Stream that gets called every time the WebSocket connects
+  /// including reconnect
+  Stream get ready => _readyStream.stream;
+
+  /// Gets called every time the WebSocket disconnect from the server.  
+  /// On every call it will try to reconnect
+  Stream get onDone => _onDoneStream.stream;
 
   _socketSend(data, [int reqId]){
     Map<String, dynamic> packet = {'a': data};
@@ -92,13 +122,6 @@ class WebSocketChannelWrapper {
   /// Returns listener on [event] name 
   Stream on(String event) => _on(event);
 
-  /// Close the socket and send [closeCode] and [closeReason] to the server
-  close([int closeCode, String closeReason]){
-    _socket.sink.close(closeCode, closeReason);
-    _channels.forEach((_, sc) => sc?.close());
-    _channels = null;
-  }
-
   _onData(data) {
     Map map = json.decode(data);
     
@@ -108,11 +131,28 @@ class WebSocketChannelWrapper {
       var key = map['a']['0'];
 
       if (key == 'connect'){
-        _connectionTimer.cancel();
-        _readyCompleter.complete();
+        _wasOpen = true;
+        _readyStream.sink.add(null);
+        _reconnectTimer?.cancel();
+        _autoRecTimer?.cancel();
       }else if (_channels.containsKey(key)){
         _channels[key].sink.add(map['a']['1']);
       }
     }
+  }
+
+  _onDone() {
+    _reconnect();
+
+    _onDoneStream.sink.add(null);
+    _wasOpen = false;
+  }
+
+  /// Close the socket and send [closeCode] and [closeReason] to the server
+  close([int closeCode, String closeReason]){
+    _socket.sink.close(closeCode, closeReason);
+    _channels.forEach((_, sc) => sc?.close());
+    _readyStream.close();
+    _onDoneStream.close();
   }
 }

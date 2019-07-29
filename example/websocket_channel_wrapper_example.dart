@@ -7,7 +7,7 @@ main() {
 
   print('Connecting...');
 
-  socket.ready.then((_) {
+  socket.ready.listen((_) { // It's called evey time the WebSocket reconnect
     print('Connected!');
 
     socket.emit('msg', ['DART_WEBSOCKET_WRAPPER', 'Hello, World!']);
@@ -24,5 +24,5 @@ main() {
       socket.close(code, reason);
     });
   
-  }).catchError((_) => print('Connection timeout'));
+  });
 }
