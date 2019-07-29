@@ -1,0 +1,11 @@
+{
+    "author": "cTatu",
+    "name": "node_ws_wrapper_server_example",
+    "version": "1.0.0",
+    "license": "BSD-2-Clause",
+    "dependencies": {
+      "ws": "7.0.1",
+      "ws-wrapper": "^2.0.1"
+    }
+  }
+  
