@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 import 'dart:convert';
+import 'package:pedantic/pedantic.dart';
 import 'package:web_socket_channel/io.dart';
 
 class WebSocketChannelWrapper {
@@ -38,8 +39,9 @@ class WebSocketChannelWrapper {
   _socketSend(data, [int reqId]){
     Map<String, dynamic> packet = {'a': data};
 
-    if (reqId != null)
+    if (reqId != null){
       packet['i'] = reqId;
+    }
 
     _socket.sink.add(json.encode(packet));
   }
@@ -67,7 +69,7 @@ class WebSocketChannelWrapper {
     Map res = await _on(_requestIds++).first;
     
     var id = res['i'];
-    _channels[id].close();
+    unawaited(_channels[id].close());
     _channels[id] = null;
 
     var completer = Completer();
@@ -100,16 +102,17 @@ class WebSocketChannelWrapper {
   _onData(data) {
     Map map = json.decode(data);
     
-    if (map.containsKey('i'))
+    if (map.containsKey('i')){
       _channels[map['i']].sink.add(map);
-    else if (map.containsKey('a')){
+    }else if (map.containsKey('a')){
       var key = map['a']['0'];
 
       if (key == 'connect'){
         _connectionTimer.cancel();
         _readyCompleter.complete();
-      }else if (_channels.containsKey(key))
+      }else if (_channels.containsKey(key)){
         _channels[key].sink.add(map['a']['1']);
+      }
     }
   }
 }
