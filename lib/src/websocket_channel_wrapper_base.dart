@@ -8,7 +8,7 @@ import 'package:web_socket_channel/io.dart';
 
 class WebSocketChannelWrapper {
   int _requestIds;
-  bool _wasOpen = false;
+  bool _wasOpen = false, _autoReconnect = true;
   Map<dynamic, StreamController> _channels;
   IOWebSocketChannel _socket;
   StreamController _readyStream, _onDoneStream;
@@ -48,6 +48,10 @@ class WebSocketChannelWrapper {
 
   /// Auto-reconnect using exponential back-off
   _reconnect () {
+    if(!_autoReconnect){
+      return;
+    }
+
     if(_wasOpen) {
         _reconnectValue = RECONNECT_VALUE_MIN;
     }else {
@@ -143,16 +147,14 @@ class WebSocketChannelWrapper {
 
   _onDone() {
     _reconnect();
-
     _onDoneStream.sink.add(null);
     _wasOpen = false;
   }
 
   /// Close the socket and send [closeCode] and [closeReason] to the server
   close([int closeCode, String closeReason]){
-    _socket.sink.close(closeCode, closeReason);
+    _autoReconnect = false;
     _channels.forEach((_, sc) => sc?.close());
-    _readyStream.close();
-    _onDoneStream.close();
+    _socket.sink.close(closeCode, closeReason);
   }
 }
