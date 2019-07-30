@@ -17,7 +17,7 @@ main() {
 
   print('Connecting...');
 
-  socket.ready.then((_) {
+  socket.ready.listen((_) {
     print('Connected!');
 
     socket.emit('msg', ['DART_WEBSOCKET_WRAPPER', 'Hello, World!']);
