@@ -1,3 +1,7 @@
+## 1.1.2
+
+- Pedantic dependencies fix for flutter
+
 ## 1.1.1
 
 - Bugfix onclose method
