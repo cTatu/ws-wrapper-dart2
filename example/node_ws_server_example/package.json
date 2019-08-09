@@ -1,6 +1,7 @@
 {
     "author": "cTatu",
     "name": "node_ws_wrapper_server_example",
+    "description": "Example Node WS server that uses the wrapper event based protocl to communicate with the Dart websocket",
     "version": "1.0.0",
     "license": "BSD-2-Clause",
     "dependencies": {

@@ -11,23 +11,23 @@ class WebSocketChannelWrapper {
   bool _wasOpen = false, _autoReconnect = true;
   Map<dynamic, StreamController> _channels;
   IOWebSocketChannel _socket;
-  StreamController _readyStream, _onDoneStream;
+  StreamController _connectStream, _onDoneStream;
   Timer _reconnectTimer, _autoRecTimer;
 
-  final double RECONNECT_VALUE_MIN = 1000, // 1 second
-               RECONNECT_VALUE_MAX = 1000 * 60.0, // 1 minute
-               RECONNECT_VALUE_FACTOR = 1.4;
+  final double _RECONNECT_VALUE_MIN = 1000, // 1 second
+               _RECONNECT_VALUE_MAX = 1000 * 60.0, // 1 minute
+               _RECONNECT_VALUE_FACTOR = 1.4;
 
   double _reconnectValue;
   var _url, _protocols, _headers, _pingInterval;
 
   WebSocketChannelWrapper(String url,
       {Iterable<String> protocols, Map<String, dynamic> headers, Duration pingInterval}) : _requestIds = 0,
-                                _readyStream = StreamController(),
-                                _onDoneStream = StreamController(),
+                                _connectStream = StreamController.broadcast(),
+                                _onDoneStream = StreamController.broadcast(),
                                 _channels = HashMap()
       {
-        _reconnectValue = RECONNECT_VALUE_MIN;
+        _reconnectValue = _RECONNECT_VALUE_MIN;
         _init(url, protocols: protocols, headers: headers, pingInterval: pingInterval);
       }
 
@@ -53,9 +53,9 @@ class WebSocketChannelWrapper {
     }
 
     if(_wasOpen) {
-        _reconnectValue = RECONNECT_VALUE_MIN;
+        _reconnectValue = _RECONNECT_VALUE_MIN;
     }else {
-        _reconnectValue = min<num>(_reconnectValue * RECONNECT_VALUE_FACTOR, RECONNECT_VALUE_MAX);
+        _reconnectValue = min<num>(_reconnectValue * _RECONNECT_VALUE_FACTOR, _RECONNECT_VALUE_MAX);
     }
 
     _reconnectTimer = Timer(Duration(milliseconds: _reconnectValue.round()), () => 
@@ -64,7 +64,7 @@ class WebSocketChannelWrapper {
 
   /// Stream that gets called every time the WebSocket connects
   /// including reconnect
-  Stream get ready => _readyStream.stream;
+  Stream get onConnect => _connectStream.stream;
 
   /// Gets called every time the WebSocket disconnect from the server.  
   /// On every call it will try to reconnect
@@ -136,7 +136,7 @@ class WebSocketChannelWrapper {
 
       if (key == 'connect'){
         _wasOpen = true;
-        _readyStream.sink.add(null);
+        _connectStream.sink.add(null);
         _reconnectTimer?.cancel();
         _autoRecTimer?.cancel();
       }else if (_channels.containsKey(key)){

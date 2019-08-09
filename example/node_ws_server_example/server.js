@@ -1,7 +1,9 @@
 const WebSocketServer = require("ws").Server
   , WebSocketWrapper = require("ws-wrapper");
 
-var wss = new WebSocketServer({port: 30000});
+const PORT = 42069
+
+var wss = new WebSocketServer({port: PORT});
 var sockets = new Set();
 
 wss.on("connection", (sckt, req) => {
@@ -28,3 +30,5 @@ wss.on("connection", (sckt, req) => {
         sockets.delete(socket);
 	});
 })
+
+console.log('Listening on port: ' + PORT)

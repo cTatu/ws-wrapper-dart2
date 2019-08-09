@@ -1,15 +1,21 @@
+## 1.1.3
+
+- Fix bug on events stream e.g. `onConnect` & `onDone`
+- Improving example code
+
 ## 1.1.2
 
 - Pedantic dependencies fix for flutter
 
 ## 1.1.1
 
-- Bugfix onclose method
+- Bugfix on `close` method
 
 ## 1.1.0
 
 - Add auto-connect feature
-- Add onDone stream-events
+- Add `onDone` stream-events
+- Add `onConnect` stream-events, this includes reconnect events
 
 ## 1.0.1
 

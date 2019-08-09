@@ -1,13 +1,23 @@
 import 'dart:async';
 import 'package:websocket_channel_wrapper/websocket_channel_wrapper.dart';
 
+const PORT = 42069;
+
 main() {
-  WebSocketChannelWrapper socket = WebSocketChannelWrapper('ws://192.168.0.18:30000',
+  WebSocketChannelWrapper socket = WebSocketChannelWrapper('ws://192.168.0.18:$PORT',
                                               headers: {'id': '1234567890qwertyuiop'});
 
   print('Connecting...');
 
-  socket.ready.listen((_) { // It's called evey time the WebSocket reconnect
+  var onReady = socket.onConnect.first;
+
+  onReady.timeout(Duration(seconds: 5), onTimeout: () => print('Server could not be reach, trying to re-connect'));
+
+  socket.onConnect.skip(1).listen((_) => print('Successful re-connection to server'));
+
+  socket.onDone.listen((_) => print('Connection lost, trying to re-connect!'));
+
+  onReady.then((_) { // [onConnect] It's called every time the WebSocket reconnect
     print('Connected!');
 
     socket.emit('msg', ['DART_WEBSOCKET_WRAPPER', 'Hello, World!']);
@@ -18,11 +28,10 @@ main() {
 
     socket.request('checkError').catchError((e) => print(e));        // Yep, errors work
 
-    Timer(Duration(seconds: 5), () {    // Close the socket after 5 seconds
+    Timer(Duration(minutes: 1), () {    // Close the socket after 1 minute
       var code = 1007, reason = 'break time';
       print('Close code: $code Reason: $reason');
       socket.close(code, reason);
     });
-  
   });
 }
