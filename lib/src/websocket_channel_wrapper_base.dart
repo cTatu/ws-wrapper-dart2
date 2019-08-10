@@ -31,6 +31,9 @@ class WebSocketChannelWrapper {
         _init(url, protocols: protocols, headers: headers, pingInterval: pingInterval);
       }
 
+  set autoReconnect (bool value) => _autoReconnect = value;
+  bool get autoReconnect => _autoReconnect;
+
   _fromSocket(WebSocket socket) => IOWebSocketChannel(socket);
 
   _init(url, {protocols, headers, pingInterval, connectionTimer}) {
@@ -152,9 +155,9 @@ class WebSocketChannelWrapper {
   }
 
   /// Close the socket and send [closeCode] and [closeReason] to the server
-  close([int closeCode, String closeReason]){
+  close({int closeCode, String closeReason}){
     _autoReconnect = false;
     _channels.forEach((_, sc) => sc?.close());
-    _socket.sink.close(closeCode, closeReason);
+    _socket.sink.close(closeCode ?? 1000, closeReason);
   }
 }

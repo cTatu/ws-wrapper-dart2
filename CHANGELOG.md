@@ -1,3 +1,9 @@
+## 1.1.4
+
+- Official support for binary files
+- Expose socket `autoReconnect` attribute
+- Default `closeCode` value is 1000 = `NORMAL_CLOSURE`
+
 ## 1.1.3
 
 - Fix bug on events stream e.g. `onConnect` & `onDone`
